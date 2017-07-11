@@ -47,6 +47,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
     particles[i].x = dist_x(gen);
     particles[i].y = dist_y(gen);
 	particles[i].theta = dist_theta(gen);
+    particles[i].weight = 1;
   } 
   
   is_initialized = true;
@@ -58,6 +59,36 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
   cout << "ParticleFilter::prediction" << endl;
+  
+  // Standard deviations for x, y, and theta
+  double std_vel = *std_pos; 
+  double std_yaw_rate = *(std_pos+2);
+  
+  normal_distribution<double> dist_vel(velocity, std_vel);
+  normal_distribution<double> dist_yaw_rate(yaw_rate, std_yaw_rate);
+  default_random_engine gen;
+  
+  double vel, yaw_dot, yaw_dt, x, y, theta;
+  // create each particle
+  for (int i = 0; i < num_particles; ++i) {
+    if(yaw_rate == 0){
+      vel = (velocity + dist_vel(gen)) * delta_t;
+      particles[i].x += vel * cos(particles[i].theta);
+      particles[i].y += vel * sin(particles[i].theta);
+      //particles[i].theta = particles[i].theta;   
+    } else {
+      yaw_dot = yaw_rate + dist_yaw_rate(gen);
+      yaw_dt = yaw_dot * delta_t;
+      vel = (velocity + dist_vel(gen)) / yaw_dot;
+      x = particles[i].x;
+      y = particles[i].y;
+      theta = particles[i].theta;
+      
+      particles[i].x += vel * (sin(theta + yaw_dt) - sin(theta));
+      particles[i].y += vel * (cos(theta) - cos(theta + yaw_dt));
+      particles[i].theta += yaw_dt;
+    }
+  } 
 }
 
 void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations) {
