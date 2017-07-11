@@ -47,7 +47,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
     particles[i].x = dist_x(gen);
     particles[i].y = dist_y(gen);
 	particles[i].theta = dist_theta(gen);
-    particles[i].weight = 1;
+    particles[i].weight = 1.0;
   } 
   
   is_initialized = true;
@@ -69,7 +69,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
   default_random_engine gen;
   
   double vel, yaw_dot, yaw_dt, x, y, theta;
-  // create each particle
+  // predict each particle after the motion
   for (int i = 0; i < num_particles; ++i) {
     if(yaw_rate == 0){
       vel = (velocity + dist_vel(gen)) * delta_t;
@@ -101,7 +101,7 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
 		std::vector<LandmarkObs> observations, Map map_landmarks) {
-	// TODO: Update the weights of each particle using a mult-variate Gaussian distribution. You can read
+	// TODO: Update the weights of each particle using a multi-variate Gaussian distribution. You can read
 	//   more about this distribution here: https://en.wikipedia.org/wiki/Multivariate_normal_distribution
 	// NOTE: The observations are given in the VEHICLE'S coordinate system. Your particles are located
 	//   according to the MAP'S coordinate system. You will need to transform between the two systems.
@@ -112,6 +112,20 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
   cout << "ParticleFilter::updateWeights" << endl;
+  
+  
+  
+  /*def Gaussian(self, mu, sigma, x):
+  # calculates the probability of x for 1-dim Gaussian with mean mu and var. sigma
+  return exp(- ((mu - x) ** 2) / (sigma ** 2) / 2.0) / sqrt(2.0 * pi * (sigma ** 2)) 
+   * 
+   * def measurement_prob(self, measurement):
+  # calculates how likely a measurement should be
+  prob = 1.0;
+  for i in range(len(landmarks)):
+  dist = sqrt((self.x - landmarks[i][0]) ** 2 + (self.y - landmarks[i][1]) ** 2)
+  prob *= self.Gaussian(dist, self.sense_noise, measurement[i])
+  return prob*/
 }
 
 void ParticleFilter::resample() {
@@ -119,6 +133,17 @@ void ParticleFilter::resample() {
 	// NOTE: You may find std::discrete_distribution helpful here.
 	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
   cout << "ParticleFilter::resample" << endl;
+  
+  discrete_distribution<int> dist_weights(weights.begin(), weights.end());
+  default_random_engine gen;
+  
+  vector<Particle> reshaped_particles;
+  reshaped_particles.reserve(num_particles);
+
+  for(int i=0; i < num_particles; ++i) {
+    reshaped_particles[dist_weights(gen)];
+  }
+  particles = reshaped_particles;
 }
 
 Particle ParticleFilter::SetAssociations(Particle particle, std::vector<int> associations, std::vector<double> sense_x, std::vector<double> sense_y)
