@@ -155,10 +155,12 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       isfirst = true;
     
       for(int mark=0; mark < map_landmarks.landmark_list.size(); mark++) {
-        double x_diff = transform_obs[obs].x - map_landmarks.landmark_list[mark].x_f;
-        double y_diff = transform_obs[obs].y - map_landmarks.landmark_list[mark].y_f;
+        double x_diff = map_landmarks.landmark_list[mark].x_f - transform_obs[obs].x;
+        double y_diff = map_landmarks.landmark_list[mark].y_f - transform_obs[obs].y;
 
         dist = sqrt(x_diff*x_diff + y_diff*y_diff);
+        
+        //cout << "mark " << mark << "   " << dist << endl;
         
         if(isfirst || dist < best_dist) {
           isfirst = false;
@@ -166,12 +168,12 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
           best_lm = mark;
         }
       }
-      //cout << "best " << best_dist << endl;
+      //cout << "best " << best_lm << endl;
       particles[par].associations.push_back(best_lm);
-      particles[par].sense_x.push_back(transform_obs[obs].x);
-      particles[par].sense_y.push_back(transform_obs[obs].y);
+      //particles[par].sense_x.push_back(map_landmarks.landmark_list[best_lm].x_f); //transform_obs[obs].x);
+      //particles[par].sense_y.push_back(map_landmarks.landmark_list[best_lm].y_f); //transform_obs[obs].y);
     }
-    /*
+    
         
     particles[par].weight = 1;
     for(int i=0; i < transform_obs.size(); i++) {
@@ -192,7 +194,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       }
     }
 
-    weights[par] = particles[par].weight;*/
+    weights[par] = particles[par].weight;
   }
 }
 
