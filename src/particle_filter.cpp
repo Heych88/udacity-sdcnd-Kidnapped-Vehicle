@@ -37,7 +37,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
   normal_distribution<double> dist_y(y, std_y);
   normal_distribution<double> dist_theta(theta, std_theta);
   
-  num_particles = 100; 
+  num_particles = 500; 
   
   // create each random particle
   for (int par=0; par < num_particles; par++) {
@@ -65,14 +65,17 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
   double std_x = std_pos[0]; 
   double std_y = std_pos[1]; 
   double std_theta = std_pos[2];
+  double new_x, new_y, new_theta;
   
   default_random_engine gen;
   
   // predict each particle after the motion
   for (int par = 0; par < num_particles; par++) {
-    double new_x, new_y, new_theta;
+    new_x= 0;
+    new_y = 0;
+    new_theta = 0;
     
-    if(yaw_rate == 0){
+    if((yaw_rate < 0.0001) && (yaw_rate > -0.0001)) {
       new_x = particles[par].x + velocity*delta_t*cos(particles[par].theta);
       new_y = particles[par].y + velocity*delta_t*sin(particles[par].theta);
       new_theta = particles[par].theta;   
@@ -90,6 +93,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
     particles[par].y = dist_y(gen);
     particles[par].theta = dist_theta(gen);
   } 
+  //cout << "x " << particles[0].x << "   y " << particles[0].y << "   t " << particles[0].theta << endl;
 }
 
 void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations) {
@@ -144,27 +148,31 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     particles[par].sense_y.clear();
     
     double dist, best_dist;
+    bool isfirst;
     int best_lm=0; // tracks closest observation landmark
+    //cout << "transform_obs.size() " << map_landmarks.landmark_list.size() << endl;
     for(int obs=0; obs < transform_obs.size(); obs++) {  
-      best_dist = 1000;
-      best_lm = 0;
-      
+      isfirst = true;
+    
       for(int mark=0; mark < map_landmarks.landmark_list.size(); mark++) {
         double x_diff = transform_obs[obs].x - map_landmarks.landmark_list[mark].x_f;
         double y_diff = transform_obs[obs].y - map_landmarks.landmark_list[mark].y_f;
 
-        dist = sqrt(x_diff * x_diff + y_diff * y_diff);
-        if(dist < best_dist) {
-          // store the current landmark as the closest landmark to the observation
-          best_lm = mark;
+        dist = sqrt(x_diff*x_diff + y_diff*y_diff);
+        
+        if(isfirst || dist < best_dist) {
+          isfirst = false;
           best_dist = dist;
-        } 
+          best_lm = mark;
+        }
       }
+      //cout << "best " << best_dist << endl;
       particles[par].associations.push_back(best_lm);
-      particles[par].sense_x.push_back(transform_obs[best_lm].x);
-      particles[par].sense_y.push_back(transform_obs[best_lm].y);
+      particles[par].sense_x.push_back(transform_obs[obs].x);
+      particles[par].sense_y.push_back(transform_obs[obs].y);
     }
-    
+    /*
+        
     particles[par].weight = 1;
     for(int i=0; i < transform_obs.size(); i++) {
       // calculate the sum of the particles weight using Multivariate-Gaussian probability
@@ -184,7 +192,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       }
     }
 
-    weights[par] = particles[par].weight;
+    weights[par] = particles[par].weight;*/
   }
 }
 
