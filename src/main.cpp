@@ -38,7 +38,7 @@ int main()
 
   // Read map data
   Map map;
-  if (!read_map_data("../data/map_data.txt", map)) {
+  if (!read_map_data("./data/map_data.txt", map)) {
 	  cout << "Error: Could not open map file" << endl;
 	  return -1;
   }
@@ -104,10 +104,10 @@ int main()
 
         	for(int i = 0; i < x_sense.size(); i++)
         	{
-        		LandmarkObs obs;
-        		obs.x = x_sense[i];
-				obs.y = y_sense[i];
-				noisy_observations.push_back(obs);
+        	  LandmarkObs obs;
+        	  obs.x = x_sense[i];
+			  obs.y = y_sense[i];
+			  noisy_observations.push_back(obs);
         	}
 
 		  // Update the weights and resample
@@ -129,6 +129,8 @@ int main()
 		  }
 		  cout << "highest w " << highest_weight << endl;
 		  cout << "average w " << weight_sum/num_particles << endl;
+          
+          //best_particle = pf.SetAssociations(best_particle, best_particle.associations, best_particle.sense_x, best_particle.sense_y);
 
           json msgJson;
           msgJson["best_particle_x"] = best_particle.x;
