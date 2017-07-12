@@ -33,22 +33,25 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
   
   // create a normal Gaussian distribution from the input data to sample from 
   // for initialising each particle. 
+  default_random_engine gen;
   normal_distribution<double> dist_x(x, std_x);
   normal_distribution<double> dist_y(y, std_y);
   normal_distribution<double> dist_theta(theta, std_theta);
   
   num_particles = 100; 
-  default_random_engine gen;
   particles.reserve(num_particles); // set the size of the particle vector
+  weights.reserve(num_particles); // vector of each particles weight
   
   // create each random particle
-  for (int i = 0; i < num_particles; ++i) {
+  for (int i = 0; i < num_particles; i++) {
     particles[i].id = i;
     particles[i].x = dist_x(gen);
     particles[i].y = dist_y(gen);
 	particles[i].theta = dist_theta(gen);
     particles[i].weight = 1.0;
-  } 
+    
+    weights[i] = 1.0;
+  }
   
   is_initialized = true;
 }
@@ -61,33 +64,41 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
   cout << "ParticleFilter::prediction" << endl;
   
   // Standard deviations for x, y, and theta
-  double std_vel = *std_pos; 
-  double std_yaw_rate = *(std_pos+2);
+  double std_x = *std_pos; 
+  double std_y = *(std_pos + 1); 
+  double std_theta = *(std_pos + 2);
   
-  normal_distribution<double> dist_vel(velocity, std_vel);
-  normal_distribution<double> dist_yaw_rate(yaw_rate, std_yaw_rate);
   default_random_engine gen;
   
-  double vel, yaw_dot, yaw_dt, x, y, theta;
+  //cout << "std_x " << std_x << "  std_y " << std_y << "    t " << std_theta << endl;
+  
+  double vel, yaw_dt, new_x, new_y, new_theta, theta;
   // predict each particle after the motion
-  for (int i = 0; i < num_particles; ++i) {
+  for (int i = 0; i < num_particles; i++) {
     if(yaw_rate == 0){
-      vel = (velocity + dist_vel(gen)) * delta_t;
-      particles[i].x += vel * cos(particles[i].theta);
-      particles[i].y += vel * sin(particles[i].theta);
-      //particles[i].theta = particles[i].theta;   
+      new_x = particles[i].x + velocity * delta_t * cos(particles[i].theta);
+      new_y = particles[i].y + velocity * delta_t * sin(particles[i].theta);
+      new_theta = particles[i].theta;   
     } else {
-      yaw_dot = yaw_rate + dist_yaw_rate(gen);
-      yaw_dt = yaw_dot * delta_t;
-      vel = (velocity + dist_vel(gen)) / yaw_dot;
-      x = particles[i].x;
-      y = particles[i].y;
+      //yaw_dot = yaw_rate + dist_yaw_rate(gen);
+      //yaw_dt = yaw_rate * delta_t;
+      //vel = velocity / yaw_rate;
       theta = particles[i].theta;
       
-      particles[i].x += vel * (sin(theta + yaw_dt) - sin(theta));
-      particles[i].y += vel * (cos(theta) - cos(theta + yaw_dt));
-      particles[i].theta += yaw_dt;
+      new_x = particles[i].x + (velocity / yaw_rate) * (sin(theta + (yaw_rate * delta_t)) - sin(theta));
+      new_y = particles[i].y + (velocity / yaw_rate) * (cos(theta) - cos(theta + (yaw_rate * delta_t)));
+      new_theta = theta + (yaw_rate * delta_t);
     }
+    
+    normal_distribution<double> dist_x(new_x, std_x);
+    normal_distribution<double> dist_y(new_y, std_y);
+    normal_distribution<double> dist_theta(new_theta, std_theta);
+    
+    particles[i].x = dist_x(gen);
+    particles[i].y = dist_y(gen);
+    particles[i].theta = dist_theta(gen);
+    
+    //cout << "x " << particles[i].x << "    y " << particles[i].y << "     t " << particles[i].theta << endl;
   } 
 }
 
@@ -97,6 +108,7 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
   cout << "ParticleFilter::dataAssociation" << endl;
+  
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
@@ -111,21 +123,68 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   and the following is a good resource for the actual equation to implement (look at equation 
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
-  cout << "ParticleFilter::updateWeights" << endl;
+  cout << "ParticleFilter::updateWeights " << endl;
+      
+  double std_x = *std_landmark;
+  double std_y = *(std_landmark + 1);
   
-  
-  
-  /*def Gaussian(self, mu, sigma, x):
-  # calculates the probability of x for 1-dim Gaussian with mean mu and var. sigma
-  return exp(- ((mu - x) ** 2) / (sigma ** 2) / 2.0) / sqrt(2.0 * pi * (sigma ** 2)) 
-   * 
-   * def measurement_prob(self, measurement):
-  # calculates how likely a measurement should be
-  prob = 1.0;
-  for i in range(len(landmarks)):
-  dist = sqrt((self.x - landmarks[i][0]) ** 2 + (self.y - landmarks[i][1]) ** 2)
-  prob *= self.Gaussian(dist, self.sense_noise, measurement[i])
-  return prob*/
+  cout << "std_x " << std_x << "  std_y " << std_y << endl;
+
+  for(int i=0; i < num_particles; i++) {
+    double x_obs, y_obs, x_obj_pos, y_obj_pos;
+    double p_theta = particles[i].theta;
+    double p_x = particles[i].x;
+    double p_y = particles[i].y;
+    
+    particles[i].weight = 1.0; // reset the particles weight
+    particles[i].associations.reserve(observations.size());
+    
+    for(int obs=0; obs < observations.size(); obs++) {
+      x_obs = observations[obs].x;
+      y_obs = observations[obs].y;
+      
+      // X*cos(theta) - Y*sin(theta) + Xshift
+      x_obj_pos = x_obs * cos(p_theta) - y_obs * sin(p_theta) + p_x;
+      // X*sin(theta) + Y*cos(theta) + Yshift
+      y_obj_pos = x_obs * sin(p_theta) + y_obs * cos(p_theta) + p_y;
+      
+      // find the closest landmark for the particles observation
+      int best_landmark = 0; // tracks closest observation landmark
+      double dist, best_dist = 100;
+      
+      for(int mark=0; mark < map_landmarks.landmark_list.size(); mark++) {
+        double x_diff = x_obj_pos - map_landmarks.landmark_list[mark].x_f;
+        double y_diff = y_obj_pos - map_landmarks.landmark_list[mark].y_f;
+        
+        dist = sqrt(x_diff * x_diff + y_diff * y_diff);
+        if(dist < best_dist) {
+          // store the current landmark as the closest landmark to the observation
+          best_landmark = mark;
+          best_dist = dist;
+        } 
+      }
+      //cout << "best_landmark " << best_landmark << endl;
+      particles[i].associations[obs] = best_landmark;
+      
+      // calculate the sum of the particles weight using Multivariate-Gaussian probability
+      // n * exp(-(error_X + error_Y)
+      // n = 1 / (2 * PI * std_x * std_y)
+      // error_X = (observed_X - landmark_X) ^ 2 / (2 * std_x ^ 2)
+      // error_Y = (observed_Y - landmark_Y) ^ 2 / (2 * std_y ^ 2)
+      double x_diff = x_obj_pos - map_landmarks.landmark_list[best_landmark].x_f;
+      double y_diff = y_obj_pos - map_landmarks.landmark_list[best_landmark].y_f;
+      
+      double x_error = (x_diff * x_diff) / (2 * std_x * std_x);
+      double y_error = (y_diff * y_diff) / (2 * std_y * std_y);
+      
+      double normalise = 1 / (2 *  M_PI * std_x * std_y);
+      
+      particles[i].weight *= normalise * exp(-1.0 * (x_error + y_error));
+    }
+    weights[i] = particles[i].weight;
+    
+    //cout << "x " << particles[i].weight << "     t " << weights[i] << endl;
+  }
 }
 
 void ParticleFilter::resample() {
@@ -137,13 +196,15 @@ void ParticleFilter::resample() {
   discrete_distribution<int> dist_weights(weights.begin(), weights.end());
   default_random_engine gen;
   
-  vector<Particle> reshaped_particles;
-  reshaped_particles.reserve(num_particles);
+  vector<Particle> new_particles;
+  //new_particles.reserve(num_particles);
 
-  for(int i=0; i < num_particles; ++i) {
-    reshaped_particles[dist_weights(gen)];
+  for(int i=0; i < num_particles; i++) {
+    new_particles.push_back(particles[dist_weights(gen)]);
   }
-  particles = reshaped_particles;
+  particles = new_particles;
+  
+  //cout << particles[0].weight << endl;
 }
 
 Particle ParticleFilter::SetAssociations(Particle particle, std::vector<int> associations, std::vector<double> sense_x, std::vector<double> sense_y)
