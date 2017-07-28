@@ -1,5 +1,3 @@
-# Unscented Kalman Filter
-
 This code implement a 2 dimensional particle filter in C++ to estimate the position of a moving vehicle using a map of landmark locations, a (noisy) GPS estimate of its initial location, and lots of (noisy) sensor and control data.
 
 This project involves the Udacity Term 2 Simulator which can be downloaded [here](https://github.com/udacity/self-driving-car-sim/releases/tag/v1.0)
