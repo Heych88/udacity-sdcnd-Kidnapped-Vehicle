@@ -1,4 +1,4 @@
-This code implement a 2 dimensional particle filter in C++ to estimate the position of a moving vehicle using a map of landmark locations, a (noisy) GPS estimate of its initial location, and lots of (noisy) sensor and control data.
+This code implement a 2 dimensional particle filter in C++ to estimate the position of a moving vehicle using a map of landmark locations, a (noisy) GPS estimate of its initial location, and lots of (noisy) sensor and control data.A video of the filter in action can be found [here](https://youtu.be/6yugtvXZ9lc).
 
 This project involves the Udacity Term 2 Simulator which can be downloaded [here](https://github.com/udacity/self-driving-car-sim/releases/tag/v1.0)
 
@@ -36,9 +36,7 @@ Install [uWebSocketIO](https://github.com/uWebSockets/uWebSockets) by running th
   For Mac
   ```
   sh install-mac.sh
-  ```
-
-3. ./particle_filter
+ ```
 
 4. Start the simulator and navigate next to "Project 3: Kidnapped Vehicle" and press select.
 
@@ -48,4 +46,16 @@ If the above fails, install intall [uWebSocketIO](https://github.com/uWebSockets
 2. cd build
 3. cmake ..
 4. make
-5. ./particle_filter
+
+## Running in the Simulator
+
+The following assumes the **Build Instructions** was followed and produced no errors.
+
+Download and extract the [simulator](https://github.com/udacity/self-driving-car-sim/releases/tag/v1.0).
+
+1. Navigate to the extrated simulator directory and run the simulator.
+2. Select the settings best for your computer and click **ok**.
+3. In a terminal window run the particle_filter executable
+```
+./particle_filter
+```
