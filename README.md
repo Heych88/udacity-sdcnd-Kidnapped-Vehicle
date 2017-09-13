@@ -71,7 +71,7 @@ Download and extract the [simulator](https://github.com/udacity/self-driving-car
 3. In a terminal window run the particle_filter executable
 
 ```sh
-$ cd <local directory?/udacity-sdcnd-Kidnapped-Vehicle
+$ cd <local directory>/udacity-sdcnd-Kidnapped-Vehicle
 $ ./particle_filter
 ```
 ## Contributing
